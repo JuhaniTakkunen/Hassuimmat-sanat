@@ -109,8 +109,10 @@ laskeSananPisteet <- function(sana){
 
 
 #### PÄÄOHJELMA ####
-library(foreach)
-library(doParallel)
+# Tarvittavat kirjastot rinnakkaislaskentaan:
+# library(foreach)
+# library(doParallel)
+
 # Alustetaan käyttäjän määriteltävät muuttujat
 # kirjanURL = "http://wunderdog.fi/koodaus-hassuimmat-sanat/alastalon_salissa.txt" #linkki ei toiminut 8.2.
 kirjanURL = "http://www.cs.helsinki.fi/u/jtakkune/ohjelmat/wunderdog/alastalon_salissa.txt"
@@ -118,13 +120,14 @@ kirjanURL = "http://www.cs.helsinki.fi/u/jtakkune/ohjelmat/wunderdog/alastalon_s
 # Ladataan sanat muistiin 
 sanat = lataaKirja(kirjanURL)
 
-aikaleima <- proc.time()
 
 #### LASKETAAN PISTEET ####
+aikaleima <- proc.time()
 
-# RINNAKKAISLASKENTA: 10x hitaampi kuin funktio sapply -> ei käytössä (10.2. -JT)
-#
-# Alustetaan rinnakkaislaskenta
+# # TAPA 1: RINNAKKAISLASKENTA (POISTETTU KÄYTÖSTÄ)
+# # - 10x hitaampi kuin funktio sapply -> ei käytössä (10.2. -JT)
+# #
+# # Alustetaan rinnakkaislaskenta
 # nYtimet = 2 # lasketaan rinnakkain n-ytimellä
 # cl<-makeCluster(nYtimet)
 # registerDoParallel(cl)
@@ -138,9 +141,12 @@ aikaleima <- proc.time()
 # }
 # stopCluster(cl)
 
+# TAPA 2: sapply()
+# - nopea funktio suurten aineistojen läpikäymiseen:
 print("lasketaan sanojen pisteet")
 tulos <- sapply(sanat, laskeSananPisteet, USE.NAMES = TRUE)
 
+# Laskenta ohi - tulostus
 aikaleima = proc.time() - aikaleima
 cat("laskenta ohi ajassa:", aikaleima[3], "s\n")
 
