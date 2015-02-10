@@ -9,6 +9,7 @@
 # Ratkaissut: Juhani Takkunen 20.1.2015
 # Rinnakkaistettu 8.-9.2. -JT
 
+
 #### FUNKTIOT ####
 
 lataaKirja <- function(kirja.source, isURL=FALSE){
@@ -111,27 +112,38 @@ laskeSananPisteet <- function(sana){
 library(foreach)
 library(doParallel)
 # Alustetaan käyttäjän määriteltävät muuttujat
-# kirjanURL = "http://wunderdog.fi/koodaus-hassuimmat-sanat/alastalon_salissa.txt"
+# kirjanURL = "http://wunderdog.fi/koodaus-hassuimmat-sanat/alastalon_salissa.txt" #linkki ei toiminut 8.2.
 kirjanURL = "http://www.cs.helsinki.fi/u/jtakkune/ohjelmat/wunderdog/alastalon_salissa.txt"
-nYtimet = 4 # lasketaan rinnakkain n-ytimellä
-
-# Alustetaan rinnakkaislaskenta
-cl<-makeCluster(nYtimet)
-registerDoParallel(cl)
+nYtimet = 2 # lasketaan rinnakkain n-ytimellä
 
 # Ladataan sanat muistiin 
 sanat = lataaKirja(kirjanURL)
-ptm <- proc.time()
 
-# Lasketaan sanojen pisteet (tässä voi mennä muutamia minuutteja 
-# kirjan pituudesta riippuen)
+aikaleima <- proc.time()
+
+# RINNAKKAISLASKENTA: 10x hitaampi kuin funktio sapply
+#
+# Alustetaan rinnakkaislaskenta
+# cl<-makeCluster(nYtimet)
+# registerDoParallel(cl)
+# 
+# # Lasketaan sanojen pisteet (tässä voi mennä muutamia minuutteja 
+# # kirjan pituudesta riippuen)
+# print("lasketaan sanojen pisteet")
+# tulos <- foreach(sana = sanat, .combine='c', .inorder=FALSE) %dopar% {
+#   pisteet = laskeSananPisteet(sana)
+#   return(structure(pisteet, names=sana))
+# }
+# stopCluster(cl)
+
+
 print("lasketaan sanojen pisteet")
-tulos <- foreach(sana = sanat, .combine='c') %dopar% {
-  pisteet = laskeSananPisteet(sana)
-  return(structure(pisteet, names=sana))
-}
-stopCluster(cl)
-cat("laskenta ohi ajassa", proc.time() - ptm)
+tulos <- sapply(sanat, laskeSananPisteet, USE.NAMES = TRUE)
+
+
+aikaleima = proc.time() - aikaleima
+cat("laskenta ohi ajassa:", aikaleima[3], "s\n")
+
 ##### TULOSTA VASTAUKSET ####
 
 print("-----------")
@@ -139,4 +151,3 @@ print("Maksimipisteet sai sana")
 maxSana = names(which(tulos == max(tulos)))
 maxPisteet = max(tulos)
 cat(sprintf("%s %d pisteellä!", maxSana, maxPisteet))
-
