@@ -8,6 +8,7 @@
 
 # Ratkaissut: Juhani Takkunen 20.1.2015
 # Rinnakkaistettu 8.-9.2. -JT
+# Rinnakkaistus parannettu 13.2. -JT
 
 
 #### FUNKTIOT ####
@@ -95,8 +96,7 @@ laskeSananPisteet <- function(sana){
     kirjain = substring(sana, i, i)
     if(onkoVokaali(kirjain) == TRUE && iEkaVokaali == -1){ # vokaalisarja alkaa
       iEkaVokaali = i
-    } else if (onkoVokaali(kirjain) == FALSE && iEkaVokaali != -1){ 
-      # epävokaali päätti vokaalisarjan
+    } else if (onkoVokaali(kirjain) == FALSE && iEkaVokaali != -1){ # epävokaali päätti vokaalisarjan
       pisteet = pisteet + laskePisteet(i-iEkaVokaali)
       iEkaVokaali = -1 # nollataan vokaalilaskuri
     }
@@ -109,51 +109,51 @@ laskeSananPisteet <- function(sana){
 
 
 #### PÄÄOHJELMA ####
-# Tarvittavat kirjastot rinnakkaislaskentaan:
-# library(foreach)
-# library(doParallel)
+library(foreach)
+library(doParallel)
 
 # Alustetaan käyttäjän määriteltävät muuttujat
 # kirjanURL = "http://wunderdog.fi/koodaus-hassuimmat-sanat/alastalon_salissa.txt" #linkki ei toiminut 8.2.
 kirjanURL = "http://www.cs.helsinki.fi/u/jtakkune/ohjelmat/wunderdog/alastalon_salissa.txt"
+n_ytimet = 1 # lasketaan rinnakkain n-ytimellä
 
 # Ladataan sanat muistiin 
 sanat = lataaKirja(kirjanURL)
+cat("Kirja ladattu muistiin - kirjassa on", length(sanat), "sanaa. \n")
 
+if(n_ytimet == 1){ # EI RINNAKKAISLASKENTAA
+  cat("Lasketaan sanojen pisteet ilman rinnakkaislaskentaa yhdellä ytimellä. \n")
+  
+  aikaleima <- proc.time()
+  tulos <- sapply(sanat, laskeSananPisteet, USE.NAMES = TRUE)
+  aikaleima = proc.time() - aikaleima
+  
+  cat("Laskenta ohi ajassa:", aikaleima[3], "s ilman rinnakkaislaskentaa. \n")
+  
+}else if(n_ytimet >= 2){ # RINNAKKAISLASKENTA:
+  cat("Lasketaan sanojen pisteet rinnakkaislaskennalla käyttäen", n_ytimet, "ydintä. \n")
+  
+  # Alustetaan rinnakkaislaskenta
+  aikaleima <- proc.time()
+  cl<-makeCluster(n_ytimet)
+  registerDoParallel(cl)
+  
+  # Jaetaan taulukko n-osaan ja käydään jokainen osa läpi omalla ytimellä.
+  jaa_taulukko <- function(x,n) split(x, cut(seq_along(x), n, labels = FALSE)) 
+  tulos <- foreach(osa = jaa_taulukko(sanat, n_ytimet), .combine='c', .inorder=FALSE) %dopar% {
+    sapply(osa, laskeSananPisteet, USE.NAMES = TRUE)
+  }
+  stopCluster(cl)
+  
+  aikaleima = proc.time() - aikaleima
+  cat("Rinnakkaislaskenta ohi ajassa:", aikaleima[3], "s", n_ytimet, "ytimellä. \n")
+}
 
-#### LASKETAAN PISTEET ####
-aikaleima <- proc.time()
-
-# # TAPA 1: RINNAKKAISLASKENTA (POISTETTU KÄYTÖSTÄ)
-# # - 10x hitaampi kuin funktio sapply -> ei käytössä (10.2. -JT)
-# #
-# # Alustetaan rinnakkaislaskenta
-# nYtimet = 2 # lasketaan rinnakkain n-ytimellä
-# cl<-makeCluster(nYtimet)
-# registerDoParallel(cl)
-# 
-# # Lasketaan sanojen pisteet (tässä voi mennä muutamia minuutteja 
-# # kirjan pituudesta riippuen)
-# print("lasketaan sanojen pisteet")
-# tulos <- foreach(sana = sanat, .combine='c', .inorder=FALSE) %dopar% {
-#   pisteet = laskeSananPisteet(sana)
-#   return(structure(pisteet, names=sana))
-# }
-# stopCluster(cl)
-
-# TAPA 2: sapply()
-# - nopea funktio suurten aineistojen läpikäymiseen:
-print("lasketaan sanojen pisteet")
-tulos <- sapply(sanat, laskeSananPisteet, USE.NAMES = TRUE)
-
-# Laskenta ohi - tulostus
-aikaleima = proc.time() - aikaleima
-cat("laskenta ohi ajassa:", aikaleima[3], "s\n")
 
 ##### TULOSTA VASTAUKSET ####
-
-print("-----------")
-print("Maksimipisteet sai sana")
+cat("----------- \n")
+cat("Maksimipisteet sai sana \n")
 maxSana = names(which(tulos == max(tulos)))
 maxPisteet = max(tulos)
 cat(sprintf("%s %d pisteellä!", maxSana, maxPisteet))
+
